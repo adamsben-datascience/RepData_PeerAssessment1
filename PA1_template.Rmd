@@ -1,6 +1,6 @@
 ---
 title: "Reproducible Research - Homework 1"
-author: "Ben Adams"
+author: "Ben ADams"
 date: "November 14, 2015"
 output: 
   html_document:
@@ -28,7 +28,7 @@ The dataset is stored in a comma-separated-value (CSV) file and there are a tota
 ## Part 1:
 ### Loading and preprocessing the data
 For a full description of what I did to the data, please refer to the readme.md file.  
-```{r results='hide'}
+```{r}
 library(ggplot2)    #needed for making pretty graph
 library(data.table) #needed for working with missing values
 options(scipen=999) #disable scientific notation
@@ -48,7 +48,7 @@ mean_steps_per_day<-mean(total_steps_per_day$steps)
 median_steps_per_day<-median(total_steps_per_day$steps)
 ```
 Here is a histogram of total steps taken, as per request of assignment.
-```{r fig.width=14}
+```{r part2,fig.width=14}
 par(bg="lightgray")
 hist(total_steps_per_day$steps,
      main="Histogram of Total Steps taken per day",
@@ -74,7 +74,7 @@ interval_with_most_steps_on_average<-average_steps_per_int[
   average_steps_per_int$steps==max(average_steps_per_int$steps),1]
 ```
 Here is a time-series (line) plot of steps per interval. 
-```{r fig.width=14}
+```{r part3,fig.width=14}
 par(bg="lightgray")
 plot(average_steps_per_int$interval,
      average_steps_per_int$steps,
@@ -106,7 +106,7 @@ new_median_steps_per_day<-median(new_total_steps_per_day$steps)
 ```
 
 Here is a histogram of steps per day based on the imputed, not original values.
-```{r fig.width=14}
+```{r part4,fig.width=14}
 hist(new_total_steps_per_day$steps,
      main="Histogram of Total Steps taken per day",
      xlab="total steps taken in a day",
@@ -128,7 +128,7 @@ You'll note also the median now includes a fractional step, as we were using mea
 I made a new factor variable called day_type to compare weekdays and weekends.
 
 Here is a time-series (line) plot to show the comparative differences.
-```{r fig.width=14}
+```{r part5,fig.width=14}
 new_col<-factor(weekdays(as.Date(outDT$date)) %in%  c('Saturday','Sunday'),labels=c("weekday","weekend"))
 finalDT<-outDT[,day_type:=new_col]
 
