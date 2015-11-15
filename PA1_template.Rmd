@@ -1,25 +1,146 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
+title: "Reproducible Research - Homework 1"
+author: "Ben Adams"
+date: "November 14, 2015"
 output: 
   html_document:
     keep_md: true
 ---
+# Homework #1
+This is a report for the Johns Hopkins Coursera course *Reproducable Research* More specifically, **Homework/Programming Assingment 1**
 
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
-## Loading and preprocessing the data
+## Data
 
+The data for this assignment can be downloaded from the course web site:
 
+- Dataset: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip) [52K]
 
-## What is mean total number of steps taken per day?
+The variables included in this dataset are:
 
+* **steps:** Number of steps taking in a 5-minute interval (missing values are coded as NA)
+* **date:** The date on which the measurement was taken in YYYY-MM-DD format
+* **interval:** Identifier for the 5-minute interval in which measurement was taken
 
+The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.
 
-## What is the average daily activity pattern?
+## Part 1:
+### Loading and preprocessing the data
+For a full description of what I did to the data, please refer to the readme.md file.  
+```{r results='hide'}
+library(ggplot2)    #needed for making pretty graph
+library(data.table) #needed for working with missing values
+options(scipen=999) #disable scientific notation
 
+activity_data <- read.csv('./data/activity.csv')
 
+origDT<-data.table(activity_data,key=c("interval"))
 
+```
+
+## Part 2 
+### What is the Mean Total Number of steps per day?
+I aggregate by day and calculate the total steps each day.
+```{r}
+total_steps_per_day<-aggregate(.~date,activity_data,sum)
+mean_steps_per_day<-mean(total_steps_per_day$steps)
+median_steps_per_day<-median(total_steps_per_day$steps)
+```
+Here is a histogram of total steps taken, as per request of assignment.
+```{r fig.width=14}
+par(bg="lightgray")
+hist(total_steps_per_day$steps,
+     main="Histogram of Total Steps taken per day",
+     xlab="total steps taken in a day",
+     ylab="days with those steps",
+     breaks=20,
+     col="darkblue",
+     border="lightblue"
+)
+```
+
+The mean/average of total steps per day:`r round(mean_steps_per_day,3)`.  
+The median of total steps per day: `r round(median_steps_per_day,3)`.  
+(note: values rounded)
+
+## Part 3
+### What is the average daily activity pattern?
+I aggregate by the interval and calculate the mean per interval of the steps.
+```{r}
+average_steps_per_int<-aggregate(.~interval,origDT,mean)
+
+interval_with_most_steps_on_average<-average_steps_per_int[
+  average_steps_per_int$steps==max(average_steps_per_int$steps),1]
+```
+Here is a time-series (line) plot of steps per interval. 
+```{r fig.width=14}
+par(bg="lightgray")
+plot(average_steps_per_int$interval,
+     average_steps_per_int$steps,
+     type="l",
+     main="Average Daily Activity",
+     xlab="interval in the day",
+     ylab="steps taken"
+     )
+```
+
+On average, the interval with the most number of steps over the course of a typical day is: `r interval_with_most_steps_on_average`.
+## Part 4
 ## Imputing missing values
+There were a number of days with missing values at one or more intervals.  To combat this, I imputed data by inserting the average of all the other days at that missing interval.
 
+Example: If day 10-05-2012, interval 15, there were no steps recorded, I fill it with the average of steps taken during interval 15 for all other days.
 
+```{r}
+avgDT<-data.table(average_steps_per_int,key=c("interval"))
+intermDT<-origDT[,steps:=as.double(steps)]
 
-## Are there differences in activity patterns between weekdays and weekends?
+outDT<-intermDT[avgDT]
+outDT<-outDT[is.na(steps),steps:=i.steps]
+outDT<-outDT[,list(steps,date,interval)]
+
+new_total_steps_per_day<-aggregate(.~date,outDT,sum)
+new_average_steps_per_day<-mean(new_total_steps_per_day$steps)
+new_median_steps_per_day<-median(new_total_steps_per_day$steps)
+```
+
+Here is a histogram of steps per day based on the imputed, not original values.
+```{r fig.width=14}
+hist(new_total_steps_per_day$steps,
+     main="Histogram of Total Steps taken per day",
+     xlab="total steps taken in a day",
+     ylab="days with those steps",
+     breaks=20,
+     col="darkblue",
+     border="lightblue"
+)
+```
+
+Once data is imputed, the new average(mean) of steps per day is:`r round(new_average_steps_per_day,3)`  
+And the new median is: `r round(new_median_steps_per_day,3)`
+
+This is exactly the same mean, as the data I used assumed the same mean for each individual interval.  The new median is now just a skootch higher, as there are NA's filled in around the old median.
+
+You'll note also the median now includes a fractional step, as we were using means to fill in missing data.
+## Part 5
+### Are there differences in activity patterns between weekdays and weekends?
+I made a new factor variable called day_type to compare weekdays and weekends.
+
+Here is a time-series (line) plot to show the comparative differences.
+```{r fig.width=14}
+new_col<-factor(weekdays(as.Date(outDT$date)) %in%  c('Saturday','Sunday'),labels=c("weekday","weekend"))
+finalDT<-outDT[,day_type:=new_col]
+
+avg_steps_by_daytype <-aggregate(.~interval+day_type,finalDT,mean)
+
+qplot(interval,steps,data=avg_steps_by_daytype,
+      col=day_type,
+      facets=.~day_type,
+      geom=c('line','smooth'),method="lm",se=F)+
+  labs(title="Average Daily Activity, Weekend vs Weekday",
+       x="Nth Interval in the Day (0=midnight)",
+       y="Steps Taken")
+```  
+
+I always prefer to have a trend line in my time-series plots, particularly when you're comparing two time series.  You'll see one here.
